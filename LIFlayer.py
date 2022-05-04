@@ -1,3 +1,4 @@
+from stat import IO_REPARSE_TAG_APPEXECLINK
 import torch
 import torch.nn as nn
 import numpy as np
@@ -44,7 +45,53 @@ class LIFDensePopulation(nn.Module):
         self.NeuronState = self.state
 
     def init_mod_weights(self,W):
-        self.fc_layer.weight = torch.nn.Parameter(self.fc_layer.weight.data * torch.Tensor(W))
+        self.fc_layer.weight = torch.nn.Parameter(self.fc_layer.weight.data * torch.tensor(W,dtype=float))
+class LifRecPopulation(nn.Module):
+    # NeuronState = namedtuple('NeuronState', ['U', 'I', 'S'])
+    def __init__(self, in_channels, out_channels, bias=True, alpha = .9, beta=.85, batch_size=10,W=None,device='cpu'):
+        super(LifRecPopulation, self).__init__()
+        self.fc_layer = nn.Linear(in_channels, out_channels)
+        self.rec_layer = nn.Linear(out_channels, out_channels)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.batch_size = batch_size
+        self.device = device
+        self.weight_scale = 0.2
+        self.alpha = alpha
+        self.beta = beta
+        self.state = NeuronState(U=torch.zeros(batch_size, out_channels).to(self.device),
+                                 I=torch.zeros(batch_size, out_channels).to(self.device),
+                                 S=torch.zeros(batch_size, out_channels).to(self.device))
+        self.NeuronState = self.state
+        #torch.nn.init.normal_(self.fc_layer.weight.data, mean=0.0, std=self.weight_scale/np.sqrt(nb_inputs))
+        self.fc_layer.weight.data.normal_(mean=0.0, std=self.weight_scale/np.sqrt(in_channels))
+        self.fc_layer.bias.data.uniform_(-.01, .01)
+        #torch.nn.init.normal_(self.rec_layer.weight.data, mean=0.0, std=self.weight_scale/np.sqrt(nb_inputs))
+        self.rec_layer.bias.data.uniform_(-.01, .01)
+        self.rec_layer.weight.data.normal_(mean=0.0, std=self.weight_scale/np.sqrt(in_channels))
+
+
+    def forward(self, Sin_t):
+        state = self.state
+        U = self.alpha*state.U + state.I - state.S.detach() #mem
+        I = self.beta*state.I + self.fc_layer(Sin_t) + self.rec_layer(state.S) #syn
+        # update the neuronal state
+        S = smooth_step(U)
+        self.state = NeuronState(U=U, I=I, S=S)
+        self.NeuronState = self.state
+        #state = NeuronState(U=U, I=I, S=S)
+        return self.state
+
+    def init_state(self):
+
+        out_channels = self.out_channels
+        self.state = NeuronState(U=torch.zeros(self.batch_size, out_channels,device=device),
+                                 I=torch.zeros(self.batch_size, out_channels,device=device),
+                                 S=torch.zeros(self.batch_size, out_channels,device=device))
+        self.NeuronState = self.state
+
+    def init_mod_weights(self,W):
+        self.fc_layer.weight = torch.nn.Parameter(self.fc_layer.weight.data * torch.tensor(W))
 
 class SmoothStep(torch.autograd.Function):
     '''
@@ -90,20 +137,24 @@ class OneHiddenModel(nn.Module):
         self.W = W
         self.layer1 = LIFDensePopulation(in_channels=self.in_channels,out_channels=self.hidden_channels,
                                          alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W).to(device)
-        self.layer2 = LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.out_channels,
+        self.layer2 = LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W).to(device)
+        self.layer3 = LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.out_channels,
                                          alpha=self.alpha,beta=self.beta,batch_size=self.batch_size).to(device)
 
     def forward(self,Sin):
-        hidden = self.layer1(Sin)
-        out = self.layer2(hidden.S)
+        hidden1 = self.layer1(Sin)
+        hidden2 = self.layer1(hidden1.S)
+        out = self.layer3(hidden2.S)
         return out
 
     def init_states(self):
         self.layer1.init_state()
         self.layer2.init_state()
+        self.layer3.init_state()
 
     def init_mod_weights(self,W):
-        self.layer1.fc_layer.weight = torch.nn.Parameter(self.layer1.fc_layer.weight.data * torch.Tensor(W))
+        self.layer2.fc_layer.weight = torch.nn.Parameter(self.layer2.fc_layer.weight.data * torch.tensor(W,dtype=float))
 
 class ThreeHiddenModel(nn.Module):
 
