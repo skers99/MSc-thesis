@@ -1,4 +1,3 @@
-from stat import IO_REPARSE_TAG_APPEXECLINK
 import torch
 import torch.nn as nn
 import numpy as np
@@ -144,7 +143,7 @@ class OneHiddenModel(nn.Module):
 
     def forward(self,Sin):
         hidden1 = self.layer1(Sin)
-        hidden2 = self.layer1(hidden1.S)
+        hidden2 = self.layer2(hidden1.S)
         out = self.layer3(hidden2.S)
         return out
 
@@ -154,7 +153,7 @@ class OneHiddenModel(nn.Module):
         self.layer3.init_state()
 
     def init_mod_weights(self,W):
-        self.layer2.fc_layer.weight = torch.nn.Parameter(self.layer2.fc_layer.weight.data * torch.tensor(W,dtype=float))
+        self.layer2.fc_layer.weight = torch.nn.Parameter((self.layer2.fc_layer.weight.data * torch.tensor(W)).float())
 
 class ThreeHiddenModel(nn.Module):
 
