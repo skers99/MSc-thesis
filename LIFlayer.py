@@ -5,13 +5,13 @@ from collections import namedtuple
 NeuronState = namedtuple('NeuronState', ['U', 'I', 'S'])
 class LIFDensePopulation(nn.Module):
     # NeuronState = namedtuple('NeuronState', ['U', 'I', 'S'])
-    def __init__(self, in_channels, out_channels, bias=True, alpha = .9, beta=.85, batch_size=10,W=None,device='cpu'):
+    def __init__(self, in_channels, out_channels,device='cpu', bias=True, alpha = .9, beta=.85, batch_size=10,W=None):
         super(LIFDensePopulation, self).__init__()
         self.fc_layer = nn.Linear(in_channels, out_channels)
         self.in_channels = in_channels
+        self.device = device
         self.out_channels = out_channels
         self.batch_size = batch_size
-        self.device = device
         self.weight_scale = 0.2
         self.alpha = alpha
         self.beta = beta
@@ -19,7 +19,7 @@ class LIFDensePopulation(nn.Module):
                                  I=torch.zeros(batch_size, out_channels).to(self.device),
                                  S=torch.zeros(batch_size, out_channels).to(self.device))
         self.NeuronState = self.state
-        self.fc_layer.weight.data.normal_(mean=0.0, std=self.weight_scale/np.sqrt(self.in_channels))
+        self.fc_layer.weight.data.normal_(mean=0.0, std=self.weight_scale/np.sqrt(in_channels))
         #torch.nn.init.normal_(self.fc_layer.weight.data, mean=0.0, std=self.weight_scale/np.sqrt(nb_inputs))
         self.fc_layer.bias.data.uniform_(-.01, .01)
 
@@ -44,7 +44,7 @@ class LIFDensePopulation(nn.Module):
         self.NeuronState = self.state
 
     def init_mod_weights(self,W):
-        self.fc_layer.weight = torch.nn.Parameter(self.fc_layer.weight.data * torch.Tensor(W))
+        self.fc_layer.weight = torch.nn.Parameter(self.fc_layer.weight.data * W)
 
 class SmoothStep(torch.autograd.Function):
     '''
@@ -89,9 +89,9 @@ class OneHiddenModel(nn.Module):
         self.device = device
         self.W = W
         self.layer1 = LIFDensePopulation(in_channels=self.in_channels,out_channels=self.hidden_channels,
-                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W).to(device)
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W,device=device).to(device)
         self.layer2 = LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.out_channels,
-                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size).to(device)
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,device=device).to(device)
 
     def forward(self,Sin):
         hidden = self.layer1(Sin)
@@ -103,7 +103,7 @@ class OneHiddenModel(nn.Module):
         self.layer2.init_state()
 
     def init_mod_weights(self,W):
-        self.layer1.fc_layer.weight = torch.nn.Parameter(self.layer1.fc_layer.weight.data * torch.Tensor(W))
+        self.layer1.fc_layer.weight = torch.nn.Parameter(self.layer1.fc_layer.weight.data * W)
 
 class ThreeHiddenModel(nn.Module):
 
@@ -165,19 +165,19 @@ class FiveHiddenModel(nn.Module):
         self.device = device
         self.W = W
         self.layer1 = LIFDensePopulation(in_channels=self.in_channels,out_channels=self.hidden_channels,
-                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W).to(device)
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W,device=device).to(device)
         self.layer2 = LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
-                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size).to(device)
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,device=device).to(device)
         self.layer3 = LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
-                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size).to(device)
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,device=device).to(device)
         self.layer4 = LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
-                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size).to(device)
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,device=device).to(device)
         self.layer5 = LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
-                                        alpha=self.alpha,beta=self.beta,batch_size=self.batch_size).to(device)
-        self.layer6 = LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
-                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size).to(device)
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,device=device).to(device)
+        self.layer6 =LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,device=device).to(device)
         self.layer7 = LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.out_channels,
-                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size).to(device)
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,device = device).to(device)
         #maybe try last layer non- spiking
 
     def forward(self,Sin):
@@ -201,8 +201,8 @@ class FiveHiddenModel(nn.Module):
 
     def init_mod_weights(self,W):
         #self.layer1.fc_layer.weight = torch.nn.Parameter(self.layer1.fc_layer.weight.data * torch.Tensor(W))
-        self.layer2.fc_layer.weight = torch.nn.Parameter(self.layer2.fc_layer.weight.data * torch.Tensor(W))
-        self.layer3.fc_layer.weight = torch.nn.Parameter(self.layer3.fc_layer.weight.data * torch.Tensor(W))
-        self.layer4.fc_layer.weight = torch.nn.Parameter(self.layer4.fc_layer.weight.data * torch.Tensor(W))
-        self.layer5.fc_layer.weight = torch.nn.Parameter(self.layer5.fc_layer.weight.data * torch.Tensor(W))
-        self.layer6.fc_layer.weight = torch.nn.Parameter(self.layer6.fc_layer.weight.data * torch.Tensor(W))
+        self.layer2.fc_layer.weight = torch.nn.Parameter(self.layer2.fc_layer.weight.data * W)
+        self.layer3.fc_layer.weight = torch.nn.Parameter(self.layer3.fc_layer.weight.data * W)
+        self.layer4.fc_layer.weight = torch.nn.Parameter(self.layer4.fc_layer.weight.data * W)
+        self.layer5.fc_layer.weight = torch.nn.Parameter(self.layer5.fc_layer.weight.data * W)
+        self.layer6.fc_layer.weight = torch.nn.Parameter(self.layer6.fc_layer.weight.data * W)
