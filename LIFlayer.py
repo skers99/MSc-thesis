@@ -291,3 +291,58 @@ class FiveHiddenModel(nn.Module):
         self.layer4.fc_layer.weight = torch.nn.Parameter(self.layer4.fc_layer.weight.data * W)
         self.layer5.fc_layer.weight = torch.nn.Parameter(self.layer5.fc_layer.weight.data * W)
         self.layer6.fc_layer.weight = torch.nn.Parameter(self.layer6.fc_layer.weight.data * W)
+
+
+class FiveRecHiddenModel(nn.Module):
+
+    def __init__(self,in_channels,hidden_channels,out_channels,batch_size,alpha=.9,beta=.85,device='cpu',W=None):
+        super(FiveRecHiddenModel, self).__init__()
+
+        self.in_channels = in_channels
+        self.hidden_channels = hidden_channels
+        self.out_channels = out_channels
+        self.alpha = alpha
+        self.beta = beta
+        self.batch_size = batch_size
+        self.device = device
+        self.W = W
+        self.layer1 = LIFDensePopulation(in_channels=self.in_channels,out_channels=self.hidden_channels,
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W,device=device).to(device)
+        self.layer2 = LifRecPopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W,device=device).to(device)
+        self.layer3 = LifRecPopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W,device=device).to(device)
+        self.layer4 = LifRecPopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W,device=device).to(device)
+        self.layer5 = LifRecPopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W,device=device).to(device)     
+        self.layer6 = LifRecPopulation(in_channels=self.hidden_channels,out_channels=self.hidden_channels,
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,W=W,device=device).to(device)                                                                                                                                                               
+        self.layer7= LIFDensePopulation(in_channels=self.hidden_channels,out_channels=self.out_channels,
+                                         alpha=self.alpha,beta=self.beta,batch_size=self.batch_size,device=device).to(device)
+
+    def forward(self,Sin):
+        hidden1 = self.layer1(Sin)
+        hidden2 = self.layer2(hidden1.S)
+        hidden3 = self.layer3(hidden2.S)
+        hidden4 = self.layer4(hidden3.S)
+        hidden5 = self.layer5(hidden4.S)
+        hidden6 = self.layer6(hidden5.S)
+        out = self.layer7(hidden6.S)
+        return out
+
+    def init_states(self):
+        self.layer1.init_state()
+        self.layer2.init_state()
+        self.layer3.init_state()
+        self.layer4.init_state()
+        self.layer5.init_state()
+        self.layer6.init_state()
+        self.layer7.init_state()
+
+    def init_mod_weights(self,W):
+        self.layer2.fc_layer.weight = torch.nn.Parameter((self.layer2.fc_layer.weight.data * W).to(torch.float32))
+        self.layer3.fc_layer.weight = torch.nn.Parameter((self.layer3.fc_layer.weight.data * W).to(torch.float32))
+        self.layer4.fc_layer.weight = torch.nn.Parameter((self.layer4.fc_layer.weight.data * W).to(torch.float32))
+        self.layer5.fc_layer.weight = torch.nn.Parameter((self.layer5.fc_layer.weight.data * W).to(torch.float32))
+        self.layer6.fc_layer.weight = torch.nn.Parameter((self.layer6.fc_layer.weight.data * W).to(torch.float32))
