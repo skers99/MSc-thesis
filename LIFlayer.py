@@ -82,7 +82,7 @@ class LifRecPopulation(nn.Module):
         self.fc_layer.bias.data.uniform_(-.01, .01)
         #torch.nn.init.normal_(self.rec_layer.weight.data, mean=0.0, std=self.weight_scale/np.sqrt(nb_inputs))
         self.rec_layer.bias.data.uniform_(-.01, .01)
-        self.rec_layer.weight.data.normal_(mean=0.0, std=self.weight_scale/np.sqrt(in_channels))
+        self.rec_layer.weight.data.fill_(0)
 
 
     def forward(self, Sin_t):
