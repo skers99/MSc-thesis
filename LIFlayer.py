@@ -287,9 +287,9 @@ class NHiddenModel(nn.Module):
     def init_mod_weights(self,W):
         #self.layer1.fc_layer.weight = torch.nn.Parameter(self.layer1.fc_layer.weight.data * torch.Tensor(W))
         num_layers = len(self.layers)
-        for ihid in range(1, num_layers-1):
-            self.layers[ihid].fc_layer.weight = torch.nn.Parameter(self.layers[ihid].fc_layer.weight.data * W)
-
+        for ihid in range(0, num_layers-1):
+            self.layers[ihid].fc_layer.weight.data.mul_(W)
+            
 class FiveRecHiddenModel(nn.Module):
 
     def __init__(self,in_channels,hidden_channels,out_channels,batch_size,alpha=.9,beta=.85,device='cpu',W=None):
