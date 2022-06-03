@@ -117,7 +117,7 @@ def prep_data(data,T):
         temp = np.zeros((T,N))
         temp[data[i][:,0],data[i][:,1]]=1
         data_new[i]=temp
-    return torch.Tensor(data_new)
+    return torch.tensor(data_new)
 
 def instance_to_one_hot(instance, T=1000,N=100):
     '''

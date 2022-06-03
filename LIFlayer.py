@@ -105,7 +105,7 @@ class SmoothStep(torch.autograd.Function):
     '''
     Modified from: https://pytorch.org/tutorials/beginner/examples_autograd/two_layer_net_custom_function.html
     '''
-    scale = 100.0
+    scale = 10.0
     @staticmethod
     def forward(aux, x):
         """
@@ -275,10 +275,12 @@ class NHiddenModel(nn.Module):
 
     def forward(self,Sin):
         spikes = Sin
+        #states = torch.tensor([])
         for layer in self.layers:
             state = layer(spikes)
             spikes = state.S
-        return state
+            #states = torch.cat((states,spikes))
+        return state #, states
 
     def init_states(self):
         for layer in self.layers:
