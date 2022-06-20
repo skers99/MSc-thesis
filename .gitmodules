@@ -1,0 +1,6 @@
+[submodule "Selfish-RNN"]
+	path = Selfish-RNN
+	url = https://github.com/skers99/Selfish-RNN
+[submodule "Selfish_RNN"]
+	path = Selfish_RNN
+	url = https://github.com/skers99/Selfish-RNN.git
