@@ -105,7 +105,7 @@ class SmoothStep(torch.autograd.Function):
     '''
     Modified from: https://pytorch.org/tutorials/beginner/examples_autograd/two_layer_net_custom_function.html
     '''
-    scale = 10.0
+    scale = 1.0
     @staticmethod
     def forward(aux, x):
         """
